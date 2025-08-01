@@ -21,7 +21,7 @@ async function bootstrap() {
   });
 
   app.use(helmet());
-  app.enableCors(configService.get('cors'));
+  app.enableCors(configService.get('CORS'));
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -35,7 +35,7 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
 
-  if (['development', 'staging'].includes(configService.get('nodeEnv'))) {
+  if (['development', 'staging'].includes(configService.get('NODE_ENV'))) {
     const config = new DocumentBuilder()
       .setTitle('Api Documentation')
       .setDescription('The API description')
@@ -50,6 +50,6 @@ async function bootstrap() {
   const port = configService.get('PORT');
   await app.listen(port);
 
-  console.log('Application is runnig on: http://localhost:${port}');
+  console.log(`Application is running on: http://localhost:${port}`);
 }
 bootstrap();
