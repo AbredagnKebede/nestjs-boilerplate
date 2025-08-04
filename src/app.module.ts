@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerModuleOptions } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -21,6 +21,8 @@ import redisConfig from './config/redis.config';
 import storageConfig from './config/storage.config';
 import { envValidationSchema } from './config/validation.schema';
 import { abort, config } from 'process';
+import { MailModule } from './apps/auth/mail/mail.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -66,11 +68,16 @@ import { abort, config } from 'process';
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        ttl: configService.get<number>('THROTTLE_TTL'),
-        limit: configService.get<number>('THROTTLE_LIMIT'),
+      useFactory: (configService: ConfigService): ThrottlerModuleOptions => ({
+        throttlers: [
+          {
+            ttl: configService.get<number>('RATE_LIMIT_TTL') ?? 60,
+            limit: configService.get<number>('RATE_LIMIT_MAX') ?? 10,
+          }
+        ],
       }),
-    })
+    }),
+
 
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
@@ -100,9 +107,12 @@ import { abort, config } from 'process';
         },
       })
     }),
+    
     AuthModule,
     UsersModule,
     HealthModule,
+    MailModule,
+    RedisModule,
   ],
 })
 export class AppModule {}
