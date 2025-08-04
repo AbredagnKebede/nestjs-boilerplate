@@ -1,10 +1,11 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { MailService } from './mail/mail.service';
 import { EmailVerificationService } from './email-verification/email-verification.service';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Injectable()
 export class AuthService {
@@ -43,5 +44,20 @@ export class AuthService {
             return { message: 'Email successfully verified' };
         }
         return { message: 'Email verification failed' };
+    }
+
+    async getrefreshToken(refreshTokenDto: RefreshTokenDto) {
+        const exist = await this.userRepository.findOne({where: {email: refreshTokenDto.email}});
+        if(!exist) { 
+            throw new NotFoundException('User not registered yet');
+        }
+
+        if(!exist.isEmailVerified) {
+            const token = await this.emailVerificationService.generateToken(refreshTokenDto.email);
+            await this.mailService.sendMail(refreshTokenDto.email, token);
+            return {message: 'Verification email resent. Please check your inbox.'}
+        }
+        return {message: 'User is already verified'};
+
     }
 }

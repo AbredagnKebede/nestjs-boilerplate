@@ -1,6 +1,9 @@
 import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { User } from '../users/entities/user.entity';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -14,5 +17,10 @@ export class AuthController {
     @Get('verify-email')
     async verifyEmail(@Query('token') token: string ) {
         return this.authService.verifyEmail(token);
+    }
+
+    @Post('resend-verification')
+    async getrefreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+        return this.authService.getrefreshToken(refreshTokenDto);
     }
 }
