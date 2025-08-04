@@ -28,7 +28,7 @@ export class AuthService {
 
         if(saved) {
             const token = await this.emailVerificationService.generateToken(registerDto.email);
-            this.mailService.sendMail(registerDto.email, token);
+            await this.mailService.sendMail(registerDto.email, token);
             return {message: 'User successfully registered, please check your email to verify your email'};
         }
 
