@@ -3,7 +3,7 @@ import { registerAs } from '@nestjs/config';
 export default registerAs('app', () => ({
   nodeEnv: process.env.NODE_ENV,
   name: process.env.APP_NAME || 'NestJS API',
-  port: parseInt(process.env.PORT, 10) || 3000,
+  port: process.env.PORT || 3000,
   apiPrefix: process.env.API_PREFIX || 'api',
   frontendUrl: process.env.FRONTEND_URL,
   
@@ -16,7 +16,7 @@ export default registerAs('app', () => ({
   },
   
   rateLimit: {
-    ttl: parseInt(process.env.RATE_LIMIT_TTL, 10) || 60,
-    limit: parseInt(process.env.RATE_LIMIT_MAX, 10) || 100,
+    ttl: process.env.RATE_LIMIT_TTL || 60,
+    limit: process.env.RATE_LIMIT_MAX || 100,
   },
 }));
