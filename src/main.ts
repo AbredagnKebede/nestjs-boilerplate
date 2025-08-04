@@ -35,7 +35,7 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
 
-  if (['development', 'staging'].includes(configService.get('NODE_ENV'))) {
+  if (['development', 'staging'].includes(configService.get('NODE_ENV') ?? '')) {
     const config = new DocumentBuilder()
       .setTitle('Api Documentation')
       .setDescription('The API description')
