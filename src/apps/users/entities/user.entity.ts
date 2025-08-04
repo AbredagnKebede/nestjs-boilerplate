@@ -1,7 +1,7 @@
-import { hash } from "crypto";
 import * as bcrypt from "bcrypt";
 import { Role } from "src/common/enums/roles.enum";
-import { BaseEntity, BeforeInsert, BeforeUpdate, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { BeforeInsert, BeforeUpdate, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import {BaseEntity } from "src/common/entities/base.entity";
 
 @Entity()
 export class User extends BaseEntity { 

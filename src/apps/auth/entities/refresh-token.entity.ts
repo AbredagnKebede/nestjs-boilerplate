@@ -1,5 +1,6 @@
 import { User } from "src/apps/users/entities/user.entity";
-import { BaseEntity, Column, Entity, JoinColumn, ManyToOne } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne } from "typeorm";
+import { BaseEntity } from "src/common/entities/base.entity"
 
 @Entity()
 export class RefreshToken extends BaseEntity {

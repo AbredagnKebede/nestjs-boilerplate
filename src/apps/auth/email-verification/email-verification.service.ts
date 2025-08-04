@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
+import * as crypto from "crypto";
 import { RedisService } from "../../../redis/redis.service";
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "src/apps/users/entities/user.entity";
@@ -12,7 +13,7 @@ export class EmailVerificationService {
         private readonly redisService: RedisService) {}
 
     async generateToken(email: string): Promise<string> {
-        const token = Math.random().toString(36).substring(2, 15);
+        const token = crypto.randomBytes(32).toString('hex');
         await this.redisService.set(`email-verification:${token}`, email, { ttl: 3600 }); 
         return token;
     }
