@@ -8,6 +8,8 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 import { AuthModule } from './apps/auth/auth.module';
 import { UsersModule } from './apps/users/users.module';
@@ -41,12 +43,12 @@ import { RedisModule } from './redis/redis.module';
         type: 'postgres',
         host: configService.get<string>('DATABASE_HOST'),
         port: configService.get<number>('DATABASE_PORT'),
-        username: configService.get<string>('DATABASE_USERNAME'),
-        password:configService.get<string>('DATABASE_PASSWORD'),
+        username: configService.get<string>('DATABASE_USER'),
+        password:configService.get<string>('DATABASE_PASS'),
         database: configService.get<string>('DATABASE_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         migrations: [__dirname + 'database/migrations/**/*{.ts,.js}'],
-        synchronize: configService.get<boolean>('DATABASE_SYNCHRONIZE'),
+        synchronize: configService.get<boolean>('DATABASE_SYNC'),
         logging: configService.get<boolean>('DATABASE_LOGGING'),
         ssl: configService.get<boolean>('DATABASE_SSL'),
       }),
@@ -113,6 +115,15 @@ import { RedisModule } from './redis/redis.module';
     HealthModule,
     MailModule,
     RedisModule,
+  ],
+  providers: [
+    HttpExceptionFilter,
+    TransformInterceptor,
+  ],
+
+  exports: [
+    HttpExceptionFilter,
+    TransformInterceptor,
   ],
 })
 export class AppModule {}

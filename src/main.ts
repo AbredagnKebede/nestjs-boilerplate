@@ -13,7 +13,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {logger: setupLogger()});
   const configService = app.get(ConfigService);
 
-  app.use(RequestIdMiddleware);
+  const requestIdMiddleware = new RequestIdMiddleware();
+  app.use(requestIdMiddleware.use.bind(requestIdMiddleware));
+
   app.setGlobalPrefix('api')
   app.enableVersioning({
     type: VersioningType.URI,
