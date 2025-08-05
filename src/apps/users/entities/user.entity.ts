@@ -47,5 +47,4 @@ export class User extends BaseEntity {
     get FullName(): string{
         return `${this.firstName} ${this.lastName}`;
     }
-
-}   
+}

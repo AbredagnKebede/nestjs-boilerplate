@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import * as crypto from "crypto";
 import { RedisService } from "../../../redis/redis.service";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -27,6 +27,9 @@ export class EmailVerificationService {
         await this.redisService.del(`email-verification:${token}`);
 
         const user = await this.userRepository.findOne({ where: { email } });
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
         return user;
     }
 }
