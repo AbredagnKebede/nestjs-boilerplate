@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
@@ -16,11 +16,14 @@ export class AuthController {
 
     @Get('verify-email')
     async verifyEmail(@Query('token') token: string ) {
+        if (!token) {
+            throw new BadRequestException('Token is required');
+        }
         return this.authService.verifyEmail(token);
     }
 
     @Post('resend-verification')
-    async getrefreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
-        return this.authService.getrefreshToken(refreshTokenDto);
+    async resendVerificationEmail(@Body() refreshTokenDto: RefreshTokenDto) {
+        return this.authService.resendVerificationEmail(refreshTokenDto);
     }
 }
