@@ -17,23 +17,30 @@ export class AuthService {
     ) {}
 
     async register(registerDto: RegisterDto): Promise<{message: string}> {
-        const already_exist = await this.userRepository.findOne({where: {email: registerDto.email}});
-        if(already_exist) {
-            throw new BadRequestException('Email already in use, please add other email!');
+        try {
+            const already_exist = await this.userRepository.findOne({where: {email: registerDto.email}});
+            if(already_exist) {
+                throw new BadRequestException('Email already in use, please add other email!');
+            }
+
+            const user = this.userRepository.create({
+                ...registerDto
+            });
+            const saved = await this.userRepository.save(user);
+
+            if(saved) {
+                const token = await this.emailVerificationService.generateToken(registerDto.email);
+                await this.mailService.sendMail(registerDto.email, token);
+                return {message: 'User successfully registered, please check your email to verify your email'};
+            }
+
+            return {message: 'User registration failed'};
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            throw new BadRequestException('Registration failed: ' + error.message);
         }
-
-        const user = this.userRepository.create({
-            ...registerDto
-        });
-        const saved = await this.userRepository.save(user);
-
-        if(saved) {
-            const token = await this.emailVerificationService.generateToken(registerDto.email);
-            await this.mailService.sendMail(registerDto.email, token);
-            return {message: 'User successfully registered, please check your email to verify your email'};
-        }
-
-        return {message: 'User registration failed'};
     }
 
     async verifyEmail(token: string): Promise<{message: string}> { 
@@ -46,7 +53,7 @@ export class AuthService {
         return { message: 'Email verification failed' };
     }
 
-    async getrefreshToken(refreshTokenDto: RefreshTokenDto) {
+    async resendVerificationEmail(refreshTokenDto: RefreshTokenDto) {
         const exist = await this.userRepository.findOne({where: {email: refreshTokenDto.email}});
         if(!exist) { 
             throw new NotFoundException('User not registered yet');
@@ -58,6 +65,5 @@ export class AuthService {
             return {message: 'Verification email resent. Please check your inbox.'}
         }
         return {message: 'User is already verified'};
-
     }
 }
