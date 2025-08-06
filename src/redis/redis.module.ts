@@ -3,6 +3,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { RedisService } from './redis.service';
 import { redisStore } from 'cache-manager-ioredis-yet';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { RedisController } from './redis.controller';
 
 @Module({
   imports: [
@@ -22,5 +23,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   ],
   providers: [RedisService],
   exports: [RedisService],
+  controllers: [RedisController],
 })
 export class RedisModule {}

@@ -6,7 +6,13 @@ describe('RedisService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [RedisService],
+      providers: [
+        RedisService,
+        {
+          provide: 'CACHE_MANAGER',
+          useValue: {}, 
+        },
+      ],
     }).compile();
 
     service = module.get<RedisService>(RedisService);
