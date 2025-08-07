@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SentMessageInfo } from 'nodemailer';
 import * as nodemailer from 'nodemailer';
-
+ 
 @Injectable()
 export class MailService {
     private transport;
@@ -27,4 +28,20 @@ export class MailService {
         };        
         await this.transport.sendMail(mailOptions);
     }
+
+    async sendResetEmail(email: string, reset_token: string): Promise<SentMessageInfo> {
+        const baseUrl = this.configService.get<string>('BASE_URL');
+        const resetUrl = `${baseUrl}/api/v1/auth/reset-password?reset_token=${reset_token}`;
+
+        const mailOptions = {
+            from: this.configService.get<string>('EMAIL_USER'),
+            to: email,
+            subject: 'Password Reset',
+            text: `Please reset your password by clicking on the following link: ${resetUrl}`,
+        };
+
+        const message = await this.transport.sendMail(mailOptions);
+        return message;
+    }
+
 }
