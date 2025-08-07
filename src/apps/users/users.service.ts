@@ -22,4 +22,12 @@ export class UsersService {
         }
         return user;
     }
+
+    async findOne(id: string): Promise<User | null> {
+        const user = await this.usersRepository.findOne({where: {id}})
+        if (!user) {
+            return null;
+        }
+        return user;
+    }
 }
