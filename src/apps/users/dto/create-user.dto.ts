@@ -4,7 +4,7 @@ import { IsEmail, IsNotEmpty, IsString, Matches, MinLength, minLength } from 'cl
 export class RegisterDto {
     @ApiProperty({
         description: 'Email of the user',
-        example: 'abredagn@gmail.com',
+        example: 'example@gmail.com',
     })
     @IsNotEmpty()
     @IsEmail()
@@ -22,7 +22,7 @@ export class RegisterDto {
 
     @ApiProperty({
         description: 'Last name of the user',
-        example: 'Dagnall',
+        example: 'Kebede',
     })
     @IsNotEmpty()
     @IsString()
