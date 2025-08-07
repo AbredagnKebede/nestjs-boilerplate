@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
@@ -11,6 +11,9 @@ import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { v4 as uuidv4 } from 'uuid'; 
 import { RefreshToken } from './entities/refresh-token.entity';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ForgetPasswordDto } from './dto/forget-password.dto';
+import { Not } from 'typeorm/browser';
 
 @Injectable()
 export class AuthService {
@@ -134,8 +137,98 @@ export class AuthService {
         }); 
     }
 
+    async validateRefreshToken(token: string, userId: string): Promise<boolean> {
+        const refreshToken = await this.refreshTokenRepository.findOne({
+        where: { token, userId },
+        });
+        
+        if (!refreshToken || refreshToken.isRevoked || refreshToken.isExpired()) {
+        return false;
+        }
+        
+        return true;
+    }
+
+    async revokeRefreshToken(token: string): Promise<void> {
+        const refreshToken = await this.refreshTokenRepository.findOne({
+        where: { token },
+        });
+        
+        if (!refreshToken) {
+        throw new NotFoundException('Refresh token not found');
+        }
+        
+        refreshToken.isRevoked = true;
+        await this.refreshTokenRepository.save(refreshToken);
+    }
+
+    async revokeAllUserRefreshTokens(userId: string): Promise<void> {
+        await this.refreshTokenRepository.update(
+        { userId, isRevoked: false },
+        { isRevoked: true },
+        );
+    }
+
+    async forgotPassword(forgetPasswordDto: ForgetPasswordDto): Promise<{message: string}> {
+        const email = forgetPasswordDto.email;
+        const user = await this.usersService.findByEmail(email);
+
+        if(!user) { 
+            throw new  NotFoundException('User not found exception');
+        }
+
+        const reset_token = await this.emailVerificationService.generateToken(forgetPasswordDto.email);
+        try{
+            await this.mailService.sendResetEmail(email, reset_token);
+        } catch(error) {
+            console.error('Error sendign reset email')
+        }
+        
+        return { message : 'Password reset email is sent. Please check your inbox'};
+    }
+
+    async resetPassword(token: string, newPassword: string): Promise<void> {
+        const user = await this.emailVerificationService.verifyToken(token);
+        if(!user) { 
+            throw new BadRequestException('Invalid reset token');
+        }
+
+        user.password = newPassword;
+        await this.userRepository.save(user);
+    }
+
+    async refreshTokens(userId: string, refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+        // Get the refresh token from the database
+        const refreshTokenEntity = await this.refreshTokenRepository.findOne({
+        where: { token: refreshToken },
+        relations: ['user'],
+        });
+        
+        if (!refreshTokenEntity || refreshTokenEntity.isRevoked || refreshTokenEntity.isExpired()) {
+        throw new UnauthorizedException('Invalid refresh token');
+        }
+        
+        // Revoke the current refresh token
+        refreshTokenEntity.isRevoked = true;
+        await this.refreshTokenRepository.save(refreshTokenEntity);
+        
+        // Generate new tokens
+        const user = refreshTokenEntity.user;
+        const newAccessToken = await this.generateAccessToken(user);
+        const newRefreshToken = await this.generateRefreshToken(
+        user,
+        refreshTokenEntity.userAgent,
+        refreshTokenEntity.ipAddress,
+        );
+        
+        return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        };
+    }
+
     private parseDuration(duration: string): number {
-            const regex = /^(\d+)([smhd])$/;
+        const regex = /^(\d+)([smhd])$/;
         const match = duration.match(regex);
         
         if (!match) {
