@@ -7,6 +7,9 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { LoginDto } from './dto/login.dto';
 import type { Request as ExpressRequest } from 'express';
+import { AuthGuard } from '@nestjs/passport';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ForgetPasswordDto } from './dto/forget-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -36,5 +39,16 @@ export class AuthController {
         const userAgent = req.headers['user-agent'];
         const ipAddress = req.ip
         return this.authService.login(user, userAgent, ipAddress)         
-    }   
+    } 
+    
+    @Post('forgot-password')
+    async forgotPassword(@Body() forgetPasswordDto: ForgetPasswordDto) {
+        return this.authService.forgotPassword(forgetPasswordDto);
+    }
+
+    @Post('reset-password')
+    async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+        return this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
+    }
+
 }
