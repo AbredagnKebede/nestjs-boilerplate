@@ -14,6 +14,7 @@ import { RefreshToken } from './entities/refresh-token.entity';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ForgetPasswordDto } from './dto/forget-password.dto';
 import { Not } from 'typeorm/browser';
+import { ReverificationDto } from './dto/reverification.dto';
 
 @Injectable()
 export class AuthService {
@@ -61,37 +62,42 @@ export class AuthService {
         if (user) {
             user.isEmailVerified = true;
             await this.userRepository.save(user);
-            return { message: 'Email successfully verified' };
+            return { message: 'Email successfully verified. Now you can login' };
         }
         return { message: 'Email verification failed' };
     }
 
-    async resendVerificationEmail(refreshTokenDto: RefreshTokenDto) {
-        const exist = await this.userRepository.findOne({where: {email: refreshTokenDto.email}});
+    async resendVerificationEmail(reverificationDto: ReverificationDto) {
+        const exist = await this.userRepository.findOne({where: {email: reverificationDto.email}});
         if(!exist) { 
             throw new NotFoundException('User not registered yet');
         }
 
         if(!exist.isEmailVerified) {
-            const token = await this.emailVerificationService.generateToken(refreshTokenDto.email);
-            await this.mailService.sendMail(refreshTokenDto.email, token);
+            const token = await this.emailVerificationService.generateToken(reverificationDto.email);
+            await this.mailService.sendMail(reverificationDto.email, token);
             return {message: 'Verification email resent. Please check your inbox.'}
         }
         return {message: 'User is already verified'};
     }
 
     async validateUser(email: string, password: string): Promise<User | null> {
-        const user = await this.userRepository.findOneBy({email});
-        const isPasswordValid = await user?.validatePassword(password);
+        const user = await this.usersService.findByEmail(email);
+        if(!user) {
+            return null;
+        }
+
+        const isPasswordValid = await user.validatePassword(password);
+
         console.log('Comparing:', password, user?.password);
         console.log('Result:', user ? await user.validatePassword(password) : 'User is null');
 
-        
         if(!isPasswordValid) {
             return null;
         }
         return user;
     }
+
     async login(user: User, userAgent?: string, ipAddress?: string) {
         await this.usersService.updateLastLogin(user.id);
 
@@ -174,10 +180,11 @@ export class AuthService {
         const user = await this.usersService.findByEmail(email);
 
         if(!user) { 
-            throw new  NotFoundException('User not found exception');
+            throw new BadRequestException('Invalid email')
         }
 
         const reset_token = await this.emailVerificationService.generateToken(forgetPasswordDto.email);
+
         try{
             await this.mailService.sendResetEmail(email, reset_token);
         } catch(error) {
@@ -187,8 +194,8 @@ export class AuthService {
         return { message : 'Password reset email is sent. Please check your inbox'};
     }
 
-    async resetPassword(token: string, newPassword: string): Promise<void> {
-        const user = await this.emailVerificationService.verifyToken(token);
+    async resetPassword(reset_token: string, newPassword: string): Promise<void> {
+        const user = await this.emailVerificationService.verifyToken(reset_token);
         if(!user) { 
             throw new BadRequestException('Invalid reset token');
         }

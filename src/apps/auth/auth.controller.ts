@@ -10,6 +10,7 @@ import type { Request as ExpressRequest } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ForgetPasswordDto } from './dto/forget-password.dto';
+import { ReverificationDto } from './dto/reverification.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -29,8 +30,8 @@ export class AuthController {
     }
 
     @Post('resend-verification')
-    async resendVerificationEmail(@Body() refreshTokenDto: RefreshTokenDto) {
-        return this.authService.resendVerificationEmail(refreshTokenDto);
+    async resendVerificationEmail(@Body() reverificationDto: ReverificationDto) {
+        return this.authService.resendVerificationEmail(reverificationDto);
     }
 
     @UseGuards(LocalAuthGuard)
@@ -48,7 +49,7 @@ export class AuthController {
 
     @Post('reset-password')
     async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-        return this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
+        return this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.password);
     }
 
 }

@@ -30,8 +30,8 @@ export class MailService {
     }
 
     async sendResetEmail(email: string, reset_token: string): Promise<SentMessageInfo> {
-        const baseUrl = this.configService.get<string>('BASE_URL');
-        const resetUrl = `${baseUrl}/api/v1/auth/reset-password?reset_token=${reset_token}`;
+        const frontendUrl = this.configService.get<string>('FRONT_END_URL');
+        const resetUrl = `${frontendUrl}/public/reset-password.html?reset_token=${reset_token}`;
 
         const mailOptions = {
             from: this.configService.get<string>('EMAIL_USER'),
