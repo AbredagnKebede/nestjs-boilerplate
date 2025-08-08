@@ -16,6 +16,13 @@ import { ForgetPasswordDto } from './dto/forget-password.dto';
 import { Not } from 'typeorm/browser';
 import { ReverificationDto } from './dto/reverification.dto';
 
+// New imports for enhanced security
+import { MfaService } from './services/mfa.service';
+import { SecurityLogService } from './services/security-log.service';
+import { JwtBlacklistService } from './services/jwt-blacklist.service';
+import { AccountLockoutService } from './services/account-lockout.service';
+import { SecurityEventType } from './entities/security-log.entity';
+
 @Injectable()
 export class AuthService {
     constructor(
@@ -24,6 +31,12 @@ export class AuthService {
         private readonly configService: ConfigService,
         private readonly usersService: UsersService,
         private readonly emailVerificationService: EmailVerificationService,
+
+        // Enhanced security services
+        private readonly mfaService: MfaService,
+        private readonly securityLogService: SecurityLogService,
+        private readonly jwtBlacklistService: JwtBlacklistService,
+        private readonly accountLockoutService: AccountLockoutService,
 
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
@@ -62,6 +75,15 @@ export class AuthService {
         if (user) {
             user.isEmailVerified = true;
             await this.userRepository.save(user);
+            
+            await this.securityLogService.logEvent(
+                SecurityEventType.EMAIL_VERIFIED,
+                'system',
+                'email-verification',
+                user.id,
+                user.email
+            );
+            
             return { message: 'Email successfully verified. Now you can login' };
         }
         return { message: 'Email verification failed' };
@@ -89,30 +111,95 @@ export class AuthService {
 
         const isPasswordValid = await user.validatePassword(password);
 
-        console.log('Comparing:', password, user?.password);
-        console.log('Result:', user ? await user.validatePassword(password) : 'User is null');
-
         if(!isPasswordValid) {
             return null;
         }
         return user;
     }
 
-    async login(user: User, userAgent?: string, ipAddress?: string) {
+    async login(user: User, userAgent?: string, ipAddress?: string, totpCode?: string, backupCode?: string) {
+        // Check if account is locked
+        const lockoutInfo = await this.accountLockoutService.getLockoutInfo(user.email);
+        if (lockoutInfo.isLocked) {
+            await this.accountLockoutService.recordLoginAttempt(
+                user.email,
+                ipAddress || 'unknown',
+                userAgent || 'unknown',
+                false,
+                user,
+                'Account locked'
+            );
+            
+            throw new UnauthorizedException(
+                `Account is locked until ${lockoutInfo.lockedUntil?.toISOString()}. Please try again later.`
+            );
+        }
+
+        // Check if MFA is enabled
+        const isMfaEnabled = await this.mfaService.isMfaEnabled(user.id);
+        if (isMfaEnabled) {
+            let mfaVerified = false;
+            let usedBackupCode = false;
+
+            if (totpCode) {
+                mfaVerified = await this.mfaService.verifyTotpCode(user.id, totpCode);
+            } else if (backupCode) {
+                mfaVerified = await this.mfaService.verifyBackupCode(user.id, backupCode);
+                usedBackupCode = mfaVerified;
+            }
+
+            if (!mfaVerified) {
+                await this.securityLogService.logEvent(
+                    SecurityEventType.MFA_FAILED,
+                    ipAddress || 'unknown',
+                    userAgent,
+                    user.id,
+                    user.email
+                );
+                
+                throw new UnauthorizedException('MFA verification required');
+            }
+
+            await this.securityLogService.logEvent(
+                SecurityEventType.MFA_SUCCESS,
+                ipAddress || 'unknown',
+                userAgent,
+                user.id,
+                user.email,
+                { usedBackupCode }
+            );
+        }
+
+        // Record successful login
+        await this.accountLockoutService.recordLoginAttempt(
+            user.email,
+            ipAddress || 'unknown',
+            userAgent || 'unknown',
+            true,
+            user
+        );
+
         await this.usersService.updateLastLogin(user.id);
 
         const [access_token, refresh_token] = await Promise.all([
             this.generateAccessToken(user),
             this.generateRefreshToken(user, userAgent, ipAddress),
         ]);
+        
         return {
             access_token,
             refresh_token,
+            requiresMfa: false, // Already verified if needed
         };        
     }
     
     private async generateAccessToken(user: User): Promise<string> {
-        const payload = {sub: user.id, email: user.email, role: user.role};
+        const payload = {
+            sub: user.id, 
+            email: user.email, 
+            role: user.role,
+            iat: Math.floor(Date.now() / 1000)
+        };
         return this.jwtService.signAsync(payload, {
             secret: this.configService.get('JWT_SECRET'),
             expiresIn: this.configService.get('JWT_EXPIRES_IN'),
@@ -173,6 +260,9 @@ export class AuthService {
         { userId, isRevoked: false },
         { isRevoked: true },
         );
+        
+        // Also blacklist all existing access tokens
+        await this.jwtBlacklistService.blacklistAllUserTokens(userId);
     }
 
     async forgotPassword(forgetPasswordDto: ForgetPasswordDto): Promise<{message: string}> {
@@ -185,10 +275,18 @@ export class AuthService {
 
         const reset_token = await this.emailVerificationService.generateToken(forgetPasswordDto.email);
 
+        await this.securityLogService.logEvent(
+            SecurityEventType.PASSWORD_RESET_REQUESTED,
+            'system',
+            'password-reset',
+            user.id,
+            email
+        );
+
         try{
             await this.mailService.sendResetEmail(email, reset_token);
         } catch(error) {
-            console.error('Error sendign reset email')
+            console.error('Error sending reset email')
         }
         
         return { message : 'Password reset email is sent. Please check your inbox'};
@@ -202,6 +300,17 @@ export class AuthService {
 
         user.password = newPassword;
         await this.userRepository.save(user);
+        
+        // Revoke all existing tokens after password reset
+        await this.revokeAllUserRefreshTokens(user.id);
+        
+        await this.securityLogService.logEvent(
+            SecurityEventType.PASSWORD_RESET_COMPLETED,
+            'system',
+            'password-reset',
+            user.id,
+            user.email
+        );
     }
 
     async refreshTokens(userId: string, refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
@@ -232,6 +341,38 @@ export class AuthService {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
         };
+    }
+
+    async logout(refreshToken: string, accessToken?: string): Promise<void> {
+        // Revoke refresh token
+        await this.revokeRefreshToken(refreshToken);
+        
+        // Blacklist access token if provided
+        if (accessToken) {
+            await this.jwtBlacklistService.blacklistToken(accessToken);
+        }
+        
+        await this.securityLogService.logEvent(
+            SecurityEventType.TOKEN_REVOKED,
+            'system',
+            'logout',
+            undefined,
+            undefined,
+            { type: 'single_device' }
+        );
+    }
+
+    async logoutAllDevices(userId: string): Promise<void> {
+        await this.revokeAllUserRefreshTokens(userId);
+        
+        await this.securityLogService.logEvent(
+            SecurityEventType.TOKEN_REVOKED,
+            'system',
+            'logout',
+            userId,
+            undefined,
+            { type: 'all_devices' }
+        );
     }
 
     private parseDuration(duration: string): number {
