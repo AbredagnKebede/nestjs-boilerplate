@@ -32,6 +32,23 @@ export class User extends BaseEntity {
     @Column({ nullable: true })
     lastLoginAt?: Date;
 
+    // Account security fields
+    @Column({ default: false })
+    isLocked: boolean;
+
+    @Column({ nullable: true })
+    lockedAt?: Date;
+
+    @Column({ default: 0 })
+    failedLoginAttempts: number;
+
+    @Column({ nullable: true })
+    lastFailedLoginAt?: Date;
+
+    // MFA fields
+    @Column({ default: false })
+    isMfaEnabled: boolean;
+
     @BeforeInsert()
     @BeforeUpdate()
     async hashPassword() {
