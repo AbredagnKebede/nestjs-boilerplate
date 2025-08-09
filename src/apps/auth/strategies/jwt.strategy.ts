@@ -18,7 +18,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
             secretOrKey: configService.get('JWT_SECRET')!,
-            passReqToCallback: true, // Enable to get request object
+            passReqToCallback: true, 
         });
     }
 
@@ -26,13 +26,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         try {
             const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
             
-            // Check if token is blacklisted
-            if (await this.jwtBlacklistService.isTokenBlacklisted(token)) {
+            if (await this.jwtBlacklistService.isTokenBlacklisted(token!)) {
                 throw new UnauthorizedException('Token has been revoked');
             }
 
-            // Check if user tokens were globally blacklisted after this token was issued
-            const tokenIssuedAt = payload.iat * 1000; // Convert to milliseconds
+            const tokenIssuedAt = payload.iat * 1000; 
             if (await this.jwtBlacklistService.isUserBlacklisted(payload.sub, tokenIssuedAt)) {
                 throw new UnauthorizedException('Token has been revoked');
             }
