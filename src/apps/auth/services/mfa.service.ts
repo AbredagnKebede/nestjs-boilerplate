@@ -21,30 +21,25 @@ export class MfaService {
     qrCodeUrl: string;
     manualEntryKey: string;
   }> {
-    // Check if user already has MFA setup
     let mfaSecret = await this.mfaSecretRepository.findOne({
       where: { userId },
     });
 
     const appName = this.configService.get('APP_NAME') || 'NestJS Boilerplate';
     
-    // Generate new secret if not exists
     const secret = speakeasy.generateSecret({
       name: `${appName} (${userEmail})`,
       issuer: appName,
       length: 32,
     });
 
-    // Generate backup codes
     const backupCodes = this.generateBackupCodes();
 
     if (mfaSecret) {
-      // Update existing secret
       mfaSecret.secret = secret.base32;
       mfaSecret.backupCodes = backupCodes;
-      mfaSecret.isEnabled = false; // Will be enabled after verification
+      mfaSecret.isEnabled = false;  
     } else {
-      // Create new MFA secret
       mfaSecret = this.mfaSecretRepository.create({
         userId,
         secret: secret.base32,
@@ -55,8 +50,7 @@ export class MfaService {
 
     await this.mfaSecretRepository.save(mfaSecret);
 
-    // Generate QR code
-    const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url);
+    const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || '');
 
     return {
       secret: secret.base32,
@@ -78,7 +72,7 @@ export class MfaService {
       secret: mfaSecret.secret,
       encoding: 'base32',
       token: totpCode,
-      window: 2, // Allow 30 seconds before/after current time
+      window: 2,  
     });
   }
 
@@ -96,7 +90,6 @@ export class MfaService {
       return false;
     }
 
-    // Remove used backup code
     mfaSecret.backupCodes.splice(codeIndex, 1);
     mfaSecret.backupCodesUsed += 1;
     await this.mfaSecretRepository.save(mfaSecret);
@@ -114,6 +107,9 @@ export class MfaService {
       where: { userId },
     });
 
+    if (!mfaSecret) {
+      throw new NotFoundException('MFA secret not found');
+    }
     mfaSecret.isEnabled = true;
     await this.mfaSecretRepository.save(mfaSecret);
 
@@ -159,7 +155,7 @@ export class MfaService {
   }
 
   private generateBackupCodes(): string[] {
-    const codes = [];
+    const codes: string[] = [];
     for (let i = 0; i < 10; i++) {
       codes.push(crypto.randomBytes(4).toString('hex').toUpperCase());
     }
