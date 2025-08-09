@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
+import type { Cache } from 'cache-manager';
 import { LoginAttempt } from '../entities/login-attempt.entity';
 import { User } from '../../users/entities/user.entity';
 import { SecurityLogService } from './security-log.service';

@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
+import type { Cache } from 'cache-manager';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
@@ -14,26 +14,22 @@ export class JwtBlacklistService {
 
   async blacklistToken(token: string): Promise<void> {
     try {
-      // Decode token to get expiration
       const decoded = this.jwtService.decode(token) as any;
       if (!decoded?.exp) {
         return;
       }
 
-      // Calculate TTL (time until expiration)
       const now = Math.floor(Date.now() / 1000);
       const ttl = decoded.exp - now;
 
       if (ttl > 0) {
-        // Store token in blacklist with TTL
         await this.cacheManager.set(
           `blacklist:${token}`, 
           'true', 
-          ttl * 1000 // Convert to milliseconds
+          ttl * 1000  
         );
       }
     } catch (error) {
-      // If token is invalid, we don't need to blacklist it
       console.error('Error blacklisting token:', error.message);
     }
   }
@@ -81,7 +77,7 @@ export class JwtBlacklistService {
     const match = duration.match(regex);
     
     if (!match) {
-      return 15 * 60 * 1000; // Default 15 minutes
+      return 15 * 60 * 1000;  
     }
     
     const value = parseInt(match[1]);
