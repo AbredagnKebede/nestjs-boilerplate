@@ -27,6 +27,16 @@ export class LoginMfaDto {
   @IsOptional()
   totpCode?: string;
 
+  /** 
+  @ApiProperty({
+    description: 'Email code from verification email',
+    example: '123456',
+    required: false
+  })
+  @IsString()
+  @IsOptional()
+  emailCode?: string; */
+
   @ApiProperty({
     description: 'Backup code for account recovery',
     example: 'backup-code-123',
