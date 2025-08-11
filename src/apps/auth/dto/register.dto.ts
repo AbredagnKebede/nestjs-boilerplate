@@ -1,5 +1,6 @@
-import { IsEmail, IsNotEmpty, IsString, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsStrongPassword } from '../../../common/validators/password-strength.validator';
 
 export class RegisterDto {
     @ApiProperty({
@@ -33,12 +34,6 @@ export class RegisterDto {
     })
     @IsNotEmpty()
     @IsString()
-    @MinLength(8)
-    @Matches(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/,
-        {
-        message: 'Password too weak. Include uppercase, lowercase, number, and special character.',
-        },
-  )
+    @IsStrongPassword()
     password: string;
 }

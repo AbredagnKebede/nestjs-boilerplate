@@ -13,7 +13,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ForgetPasswordDto } from './dto/forget-password.dto';
-import { Not } from 'typeorm/browser';
 import { ReverificationDto } from './dto/reverification.dto';
 
 // New imports for enhanced security
