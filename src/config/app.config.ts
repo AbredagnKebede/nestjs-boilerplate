@@ -6,6 +6,7 @@ export default registerAs('app', () => ({
   port: process.env.PORT || 3000,
   apiPrefix: process.env.API_PREFIX || 'api',
   frontendUrl: process.env.FRONTEND_URL,
+  baseUrl: process.env.BASE_URL,
   
   cors: {
     origin: process.env.CORS_ORIGIN?.split(',') || '*',
@@ -18,5 +19,17 @@ export default registerAs('app', () => ({
   rateLimit: {
     ttl: process.env.RATE_LIMIT_TTL || 60,
     limit: process.env.RATE_LIMIT_MAX || 100,
+    whitelist: process.env.RATE_LIMIT_WHITELIST?.split(',') || [],
+  },
+  
+  oauth: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    },
+    github: {
+      clientId: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    },
   },
 }));

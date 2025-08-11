@@ -44,12 +44,21 @@ export const envValidationSchema = Joi.object({
   // Rate limiting
   RATE_LIMIT_TTL: Joi.number().default(60),
   RATE_LIMIT_MAX: Joi.number().default(100),
+  RATE_LIMIT_WHITELIST: Joi.string().optional(),
+  
+  // Account Security
+  MAX_FAILED_LOGIN_ATTEMPTS: Joi.number().default(5),
+  ACCOUNT_LOCKOUT_DURATION_MINUTES: Joi.number().default(30),
+  LOGIN_ATTEMPT_WINDOW_MINUTES: Joi.number().default(15),
   
   // OAuth (optional)
   GOOGLE_CLIENT_ID: Joi.string().optional(),
   GOOGLE_CLIENT_SECRET: Joi.string().optional(),
   GITHUB_CLIENT_ID: Joi.string().optional(),
   GITHUB_CLIENT_SECRET: Joi.string().optional(),
+  
+  // App
+  APP_NAME: Joi.string().default('NestJS Boilerplate'),
   
   // S3 Storage (optional)
   S3_ACCESS_KEY: Joi.string().optional(),
