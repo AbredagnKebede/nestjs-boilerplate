@@ -10,6 +10,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { RateLimitGuard } from './common/guards/rate-limit.guard';
 
 import { AuthModule } from './apps/auth/auth.module';
 import { UsersModule } from './apps/users/users.module';
@@ -22,7 +23,6 @@ import emailConfig from './config/email.config';
 import redisConfig from './config/redis.config';
 import storageConfig from './config/storage.config';
 import { envValidationSchema } from './config/validation.schema';
-import { abort, config } from 'process';
 import { MailModule } from './apps/auth/mail/mail.module';
 import { RedisModule } from './redis/redis.module';
 
@@ -47,7 +47,7 @@ import { RedisModule } from './redis/redis.module';
         password:configService.get<string>('DATABASE_PASS'),
         database: configService.get<string>('DATABASE_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        migrations: [__dirname + 'database/migrations/**/*{.ts,.js}'],
+        migrations: [__dirname + '/database/migrations/**/*{.ts,.js}'],
         synchronize: configService.get<boolean>('DATABASE_SYNC'),
         logging: configService.get<boolean>('DATABASE_LOGGING'),
         ssl: configService.get<boolean>('DATABASE_SSL'),
@@ -101,7 +101,7 @@ import { RedisModule } from './redis/redis.module';
           from: `"No Reply" <${configService.get<string>('EMAIL_FROM')}>`,
         },
         template: {
-          dir: __dirname + '/templates',
+          dir: __dirname + '/resources/email-templates',
           adapter: new HandlebarsAdapter(),
           options: {
             strict: true,
@@ -119,11 +119,13 @@ import { RedisModule } from './redis/redis.module';
   providers: [
     HttpExceptionFilter,
     TransformInterceptor,
+    RateLimitGuard,
   ],
 
   exports: [
     HttpExceptionFilter,
     TransformInterceptor,
+    RateLimitGuard,
   ],
 })
 export class AppModule {}

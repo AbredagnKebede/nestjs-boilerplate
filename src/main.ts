@@ -6,6 +6,8 @@ import { AppModule } from './app.module';
 import helmet from 'helmet';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
+import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { RequestIdMiddleware } from './common/middlewares/request-id.middleware';
 import { setupLogger } from './common/utils/logger.util';
 
@@ -35,7 +37,8 @@ async function bootstrap() {
   );
   
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalInterceptors(new TransformInterceptor(), new AuditInterceptor());
+  app.useGlobalGuards(new RateLimitGuard());
 
   if (['development', 'staging'].includes(configService.get('NODE_ENV') ?? '')) {
     const config = new DocumentBuilder()
