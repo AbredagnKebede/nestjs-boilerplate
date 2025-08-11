@@ -83,4 +83,18 @@ export class SecurityLogService {
 
     return count;
   }
+
+  async cleanupOldLogs(daysOld: number): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+    const result = await this.securityLogRepository
+      .createQueryBuilder()
+      .delete()
+      .from(SecurityLog)
+      .where('createdAt < :cutoffDate', { cutoffDate })
+      .execute();
+
+    return result.affected || 0;
+  }
 }

@@ -96,4 +96,15 @@ export class JwtBlacklistService {
         return 15 * 60 * 1000;
     }
   }
+
+  async cleanupExpiredTokens(): Promise<number> {
+    // Redis automatically expires keys, so we just return 0
+    // In a real implementation, you might want to scan for expired keys
+    return 0;
+  }
+
+  async cleanupOldBlacklistedTokens(): Promise<void> {
+    // Redis automatically expires keys, so no manual cleanup needed
+    // This method is kept for future implementation if needed
+  }
 }
